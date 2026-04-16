@@ -1,0 +1,69 @@
+---
+title: "Running vplotter from the command line"
+description: "Learn how to invoke vplotter with all six required flags, pipe a g-code file for automated plotting, and stop the plotter cleanly with M30."
+---
+
+You invoke vplotter from the terminal with six required flags that describe your physical machine geometry and servo calibration. Because vplotter communicates with GPIO hardware through wiringPi, you must run it as root. Once started, vplotter either reads g-code from a file piped on stdin or waits for you to type commands interactively.
+
+<Warning>
+  You must run vplotter with `sudo`. wiringPi requires root-level access to the Raspberry Pi GPIO pins. Running without `sudo` will fail at hardware initialization.
+</Warning>
+
+<Note>
+  All six flags are mandatory. If any flag is omitted, vplotter exits immediately with the message `not all options are set`.
+</Note>
+
+## Required flags
+
+<ParamField path="--baselength" type="number" required>
+  Distance between the two stepper motors in millimeters. This is the horizontal span between the two anchor points at the top of your drawing surface.
+</ParamField>
+
+<ParamField path="--x0" type="number" required>
+  Horizontal distance from the left stepper motor to the canvas origin in millimeters.
+</ParamField>
+
+<ParamField path="--y0" type="number" required>
+  Vertical distance from the left stepper motor to the canvas origin in millimeters. Use a negative value when the motors are mounted above the canvas origin.
+</ParamField>
+
+<ParamField path="--z_up" type="number" required>
+  Servo PWM value used to lift the pen off the paper. Accepts a value between 1 and 100. Tune this so the pen clears the surface without straining the servo.
+</ParamField>
+
+<ParamField path="--z_down" type="number" required>
+  Servo PWM value used to lower the pen onto the paper. Accepts a value between 1 and 100. Tune this so the pen makes consistent contact with the drawing surface.
+</ParamField>
+
+<ParamField path="--steps" type="number" required>
+  Steps per millimeter for your stepper motor and pulley combination. For microstepping, calculate this as `1600 / pulley_circumference_mm`. For example, a 40 mm circumference pulley with 1/8 microstepping gives `1600 / 40 = 40`.
+</ParamField>
+
+## Running interactively
+
+Start vplotter with your machine's calibration values:
+
+```bash
+sudo vplotter --x0=170 --y0=-720 --baselength=685 --z_up=11 --z_down=7 --steps=40.1
+```
+
+After startup you can type g-code commands one at a time at the prompt. Each command is executed immediately when you press Enter. This is useful for manually positioning the gondola or testing pen up/down behavior before running a full plot.
+
+## Running a g-code file
+
+Pipe a `.ngc` or `.gcode` file to vplotter on stdin to run an unattended plot:
+
+```bash
+sudo vplotter --x0=170 --y0=-720 --baselength=685 --z_up=11 --z_down=7 --steps=40.1 < test.ngc
+```
+
+vplotter reads each line of the file in sequence and executes it. When it reaches an `M30` command the pen is lifted, the gondola returns to the origin, and the process exits.
+
+## Stopping the plotter
+
+You can stop vplotter in two ways:
+
+- **Ctrl+C** — sends an interrupt signal and halts movement immediately.
+- **Type `M30`** — the preferred method when running interactively. `M30` lifts the pen, moves the gondola back to the origin position (0, 0), and exits cleanly.
+
+Using `M30` is recommended over Ctrl+C because it leaves the gondola in a known position and ensures the pen is lifted before stopping.

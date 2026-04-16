@@ -1,0 +1,58 @@
+---
+title: "Command-line configuration reference"
+description: "All 6 required vplotter CLI flags with types, accepted ranges, and descriptions for motor geometry, steps/mm, and servo pen positions."
+---
+
+vplotter has no configuration file — every setting is passed as a command-line flag on each invocation. All 6 flags are required; if any are omitted the program exits immediately with an error. The flags describe the physical geometry of your plotter and the servo PWM values needed to lift and lower the pen.
+
+## Flags
+
+<ParamField path="--baselength" type="float (mm)" required>
+  The horizontal distance between the two stepper motor axles in millimeters. Measure from center to center of each motor shaft. Short form: `-b`.
+</ParamField>
+
+<ParamField path="--x0" type="float (mm)" required>
+  Horizontal distance from the left stepper motor to the canvas origin (top-left corner of the drawing area) in millimeters. Short form: `-x`.
+</ParamField>
+
+<ParamField path="--y0" type="float (mm)" required>
+  Vertical distance from the left stepper motor to the canvas origin. This is typically a negative value because the motors are mounted above the canvas. Short form: `-y`.
+</ParamField>
+
+<ParamField path="--z_up" type="integer (1–100)" required>
+  PWM duty cycle value sent to the servo motor when the pen is in the lifted (up) position. Higher values rotate the servo arm further. Start with `11` and tune from there. Short form: `-u`.
+</ParamField>
+
+<ParamField path="--z_down" type="integer (1–100)" required>
+  PWM duty cycle value sent to the servo motor when the pen is in the drawing (down) position. Lower values typically lower the pen. Start with `7` and tune from there.
+</ParamField>
+
+<ParamField path="--steps" type="float (steps/mm)" required>
+  Number of motor steps per millimeter of cord movement. For a microstepping driver configured at 1600 steps/revolution, calculate this as:
+
+  ```
+  steps = 1600 / pulley_circumference_mm
+  ```
+
+  Short form: `-s`.
+</ParamField>
+
+## Example invocation
+
+The values below are from a working plotter setup described in the README:
+
+```bash
+sudo vplotter --x0=170 --y0=-720 --baselength=685 --z_up=11 --z_down=7 --steps=40.1
+```
+
+<Note>
+  Most flags have short forms: `-x`, `-y`, `-b`, `-u`, `-s`. Use them just like the long forms:
+
+  ```bash
+  sudo vplotter -x 170 -y -720 -b 685 -u 11 -s 40.1 --z_down=7
+  ```
+</Note>
+
+<Warning>
+  If any flag is omitted, vplotter exits with the message `not all options are set` and does not move the motors or read any g-code. All 6 flags must be present on every invocation.
+</Warning>

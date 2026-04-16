@@ -1,0 +1,99 @@
+---
+title: "Wiring stepper motors and servo"
+description: "How to connect two EasyDriver stepper driver boards and a servo motor to your Raspberry Pi GPIO pins to build and run a vplotter machine."
+---
+
+vplotter drives two stepper motors (one per cord) and one servo motor (for the pen lift). The stepper motors connect through EasyDriver boards, which handle the high-current switching so the Raspberry Pi only needs to output low-voltage logic signals. The servo connects directly to a GPIO pin via software PWM.
+
+## Components required
+
+<CardGroup cols={2}>
+  <Card title="2× stepper motors" icon="gear">
+    Bipolar stepper motors. Any NEMA 17 motor with sufficient torque to hold the gondola works well.
+  </Card>
+  <Card title="2× EasyDriver boards" icon="microchip">
+    EasyDriver stepper driver boards from [schmalzhaus.com/EasyDriver](https://www.schmalzhaus.com/EasyDriver/). Each board drives one motor.
+  </Card>
+  <Card title="1× servo motor" icon="rotate-cw">
+    Standard hobby servo for pen lift. Any servo with a PWM control signal works.
+  </Card>
+  <Card title="Raspberry Pi" icon="cpu">
+    Any Raspberry Pi model with GPIO header and wiringPi support.
+  </Card>
+</CardGroup>
+
+You also need a **dedicated external power supply** for the stepper motors. The EasyDriver accepts 6–30 V DC at the motor power input. Do not power the motors from the Pi's 5 V rail.
+
+## GPIO pin assignments
+
+vplotter uses **wiringPi pin numbering**, which is different from BCM GPIO numbers and physical pin numbers. The table below lists the wiringPi pin for each signal.
+
+| Signal | wiringPi pin | Purpose |
+|--------|-------------|---------|
+| `LEFT_STEPPER01` | 0 | Left motor step pulse |
+| `LEFT_STEPPER02` | 7 | Left motor direction |
+| `RIGHT_STEPPER01` | 3 | Right motor step pulse |
+| `RIGHT_STEPPER02` | 4 | Right motor direction |
+| `Z_SERVO` | 1 | Servo PWM signal |
+
+<Note>
+  wiringPi pin numbers do **not** match BCM GPIO numbers or physical header pin numbers. For example, wiringPi pin 0 is BCM GPIO 17 (physical pin 11). Use the `gpio readall` command on your Pi to print a full pin mapping table, or refer to the [wiringPi pin table](https://github.com/WiringPi/WiringPi).
+</Note>
+
+## EasyDriver connections
+
+Each EasyDriver board sits between the Raspberry Pi and one stepper motor. Connect each board as follows:
+
+<Steps>
+  <Step title="Connect the Raspberry Pi signals">
+    Wire two GPIO pins from the Pi to each EasyDriver:
+
+    - Connect the **STEP** pin on the EasyDriver to the step-signal GPIO pin (wiringPi 0 for the left motor, wiringPi 3 for the right motor).
+    - Connect the **DIR** pin on the EasyDriver to the direction GPIO pin (wiringPi 7 for the left motor, wiringPi 4 for the right motor).
+    - Connect the EasyDriver **GND** to a ground pin on the Pi header.
+  </Step>
+  <Step title="Connect the stepper motor">
+    Attach the four wires of each stepper motor to the **A** and **B** coil terminals on the corresponding EasyDriver board. Refer to your motor's datasheet to identify the two coil pairs (A1/A2 and B1/B2).
+  </Step>
+  <Step title="Connect the motor power supply">
+    Wire your external DC power supply to the **M+** and **GND** power input terminals on each EasyDriver board. Use a supply within the 6–30 V range that can deliver sufficient current for both motors simultaneously.
+  </Step>
+  <Step title="Verify logic voltage">
+    The EasyDriver logic side runs at 3.3 V or 5 V. The Raspberry Pi outputs 3.3 V logic, which is compatible with the EasyDriver's inputs. No level shifting is required.
+  </Step>
+</Steps>
+
+<Warning>
+  Stepper motors draw far more current than a Raspberry Pi can supply. Always use a **dedicated external power supply** for the motor power input on the EasyDriver boards. Powering the motors from the Pi's 5 V GPIO rail will damage the Pi.
+</Warning>
+
+## Servo wiring
+
+The pen-lift servo connects to wiringPi pin 1. vplotter drives it with software PWM using the wiringPi `softPwm` library.
+
+- Connect the servo **signal wire** (usually orange or yellow) to the GPIO pin corresponding to wiringPi pin 1.
+- Connect the servo **power wire** (red) to a 5 V source. For a lightweight micro servo, the Pi's 5 V header pin is usually sufficient. For larger servos, use a separate 5 V supply.
+- Connect the servo **ground wire** (brown or black) to a ground pin on the Pi header. If you use a separate power supply for the servo, connect the grounds together.
+
+vplotter initialises the servo at startup with a software PWM range of 0–200. The `--z_up` and `--z_down` flag values set the duty cycle for the pen-up and pen-down positions respectively.
+
+## Tuning servo positions
+
+The `--z_up` and `--z_down` values are duty cycle numbers in the range 0–100 (within the 0–200 PWM range). The exact values that lift and lower your pen depend on the servo, the pen holder geometry, and how you mount the servo on the gondola.
+
+Start with the values from the README example:
+
+```bash
+sudo vplotter --x0=170 --y0=-720 --baselength=685 --z_up=11 --z_down=7 --steps=40.1
+```
+
+Then adjust until the pen behaves correctly:
+
+- **Increase `--z_up`** if the pen does not lift fully off the canvas.
+- **Decrease `--z_up`** if the servo strains or the pen arm hits a physical stop.
+- **Increase `--z_down`** if the pen does not press firmly enough against the canvas.
+- **Decrease `--z_down`** if the pen presses too hard and drags or tears the paper.
+
+<Tip>
+  Run vplotter without a g-code file and type `G0 Z0` (pen down) and `G0 Z1` (pen up) interactively to test servo positions without moving the gondola.
+</Tip>

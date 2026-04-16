@@ -1,0 +1,133 @@
+---
+title: "G-code command reference for vplotter"
+description: "Reference for all supported G and M codes in vplotter, including motion commands, arc parameters, Z-axis pen control, and unit switching."
+---
+
+vplotter reads a subset of standard RS-274 g-code. Each line of input is parsed for a command letter (`G`, `M`) followed by word addresses (`X`, `Y`, `Z`, `F`, `I`, `J`, `R`). Unrecognized commands are silently ignored. Comments enclosed in parentheses are stripped before parsing.
+
+## Motion commands
+
+### G0 — rapid move
+
+```gcode
+G0 X48.703383 Y71.271882
+```
+
+Moves the gondola to the given XY coordinates as fast as the stepper motors allow. No feed rate (`F`) is required. The pen state is set by the current value of `Z` — if no `Z` word appears on this line, the Z value from the previous line persists (see [Z-axis pen control](#z-axis-pen-control) below).
+
+### G1 — linear move
+
+```gcode
+G1 X100.0 Y50.0 F400.0
+```
+
+Moves the gondola to the given XY coordinates at the specified feed rate `F` in mm/min. `F` is required for G1; if it is missing or zero the command exits with an error.
+
+### G2 — clockwise arc
+
+Two forms are supported:
+
+```gcode
+G2 X47.184429 Y63.714616 R20.0 F400.0
+```
+
+```gcode
+G2 X47.184429 Y63.714616 I-19.559355 J0.000000 F400.000000
+```
+
+Draws a clockwise arc from the current position to XY. You must supply either `R` (radius) or both `I` and `J` (center offset relative to the current position). When `I` and `J` are provided, the radius is derived as `sqrt(I² + J²)`. A feed rate `F` is required.
+
+### G3 — counter-clockwise arc
+
+```gcode
+G3 X60.0 Y80.0 R15.0 F300.0
+```
+
+```gcode
+G3 X60.0 Y80.0 I5.0 J12.0 F300.0
+```
+
+Identical to G2 but traces the arc counter-clockwise. The same `R` or `I`+`J` rules apply, and `F` is required.
+
+<Note>
+  Arc moves (G2 and G3) always require a feed rate (`F`). Omitting `F` or supplying a value of zero causes vplotter to exit with an error. Internally, vplotter approximates arcs as a series of straight-line segments with a 0.1 radian angular step.
+</Note>
+
+<Note>
+  Feed rate is approximate. vplotter applies a 1.2× internal correction factor to the value you supply, and caps the minimum step interval at 200 microseconds, which limits the maximum achievable speed regardless of how high you set `F`.
+</Note>
+
+## Z-axis (pen control)
+
+Z is not a continuous axis in vplotter — it is binary. Any `Z` word greater than zero lifts the pen; any `Z` word of zero or less lowers the pen onto the paper. No intermediate positions are supported.
+
+| Z value | Effect |
+|---------|--------|
+| `Z > 0` | Pen up (servo moves to `--z_up` PWM value) |
+| `Z ≤ 0` | Pen down (servo moves to `--z_down` PWM value) |
+
+Lift the pen:
+
+```gcode
+G0 Z5.000000
+```
+
+Lower the pen:
+
+```gcode
+G01 Z-0.125000 F100.0
+```
+
+The `F` word on a Z-only move is accepted but has no effect on pen movement.
+
+## Units
+
+| Command | Effect |
+|---------|--------|
+| `G21`   | Use millimeters (default). All coordinate values are interpreted as mm. |
+| `G20`   | Use inches. All coordinate values are multiplied by 25.4 before use. |
+
+Set millimeter mode explicitly at the top of your g-code file to avoid ambiguity:
+
+```gcode
+G21 (All units in mm)
+```
+
+## Program control
+
+### M30 — end program
+
+```gcode
+M30
+```
+
+Ends the program, lifts the pen, moves the gondola to the origin (0, 0), and exits. This is the recommended way to stop vplotter when running interactively or at the end of a g-code file.
+
+## Comments
+
+Anything enclosed in parentheses is treated as a comment and ignored by the parser:
+
+```gcode
+G21 (All units in mm)
+G01 Z-0.125000 F100.0 (Penetrate)
+```
+
+Comments can appear anywhere on a line. They do not need to be at the end.
+
+## Complete example
+
+The following snippet shows a typical g-code file opening sequence as produced by common CAM tools:
+
+```gcode
+G21 (All units in mm)
+G00 Z5.000000
+G00 X48.703383 Y71.271882
+G01 Z-0.125000 F100.0 (Penetrate)
+G02 X47.184429 Y63.714616 Z-0.125000 I-19.559355 J0.000000 F400.000000
+```
+
+- Line 1 sets millimeter units.
+- Line 2 lifts the pen before any travel move.
+- Line 3 rapid-moves the gondola to the start position with the pen still up.
+- Line 4 lowers the pen to begin drawing.
+- Line 5 draws a clockwise arc to the next position using center offsets `I` and `J`.

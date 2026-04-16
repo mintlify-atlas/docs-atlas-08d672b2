@@ -1,0 +1,44 @@
+---
+title: "What is vplotter?"
+description: "vplotter is an open-source Raspberry Pi CLI tool that reads standard g-code and drives stepper motors and a servo to draw on a vertical canvas."
+---
+
+vplotter is a command-line tool for Raspberry Pi that turns your single-board computer into the brain of a vertical drawing machine. It reads g-code from stdin, computes cord-length geometry in real time, and outputs step pulses to two stepper motors and PWM signals to a servo — allowing you to draw arbitrary paths on any vertical surface.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install dependencies and build vplotter from source on your Raspberry Pi.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Measure your canvas, run your first command, and make your first plot.
+  </Card>
+  <Card title="Hardware geometry" icon="ruler" href="/hardware/geometry">
+    Understand the coordinate system and how to measure your setup.
+  </Card>
+  <Card title="Hardware wiring" icon="microchip" href="/hardware/wiring">
+    Connect EasyDriver stepper boards and the servo to your Raspberry Pi.
+  </Card>
+</CardGroup>
+
+## How it works
+
+A V-plotter (also called a polargraph) suspends a drawing gondola from two cords. Each cord is wound around the spool of a stepper motor mounted at the top of the drawing surface. When both motors turn, the cord lengths change independently, swinging the gondola to a precise XY position anywhere on the canvas. A servo motor attached to the gondola raises and lowers the pen for each stroke.
+
+vplotter computes the required cord lengths for every target XY coordinate using trigonometric geometry, then translates the difference into stepper pulses. The `--baselength`, `--x0`, `--y0`, and `--steps` flags describe the physical dimensions of your specific machine so the math stays accurate regardless of how you built it.
+
+## Compatible tools
+
+vplotter accepts any g-code that uses standard G0/G1 linear moves, G2/G3 arc moves, and Z-axis pen-lift commands. The recommended way to generate g-code is **Inkscape** with the **gcodetools** extension, which converts vector artwork directly to `.ngc` files that you pipe into vplotter.
+
+## Requirements
+
+To build and run a vplotter you need:
+
+- A **Raspberry Pi** (any model with GPIO)
+- Two **stepper motors** with **EasyDriver** stepper driver boards
+- A **servo motor** for the pen-lift mechanism
+- The **wiringPi** library installed on the Pi
+
+<Note>
+  vplotter must run as root. wiringPi requires root access to read and write GPIO pins directly. Always invoke vplotter with `sudo`.
+</Note>

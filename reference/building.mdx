@@ -1,0 +1,73 @@
+---
+title: "Building vplotter from source"
+description: "Prerequisites, CMake build steps, and install instructions for compiling vplotter on a Raspberry Pi running Raspberry Pi OS or Debian."
+---
+
+vplotter is built from source using CMake and requires a small set of Raspberry Pi–specific dependencies. The build process generates a native ARM binary linked against wiringPi for GPIO access and uses flex to generate the g-code lexer at compile time.
+
+## Prerequisites
+
+Install all required packages with a single command:
+
+```bash
+sudo apt-get install git-core cmake flex wiringpi
+```
+
+The packages provide:
+
+- **`git-core`** — for cloning the repository
+- **`cmake`** (>= 2.6) — the build system that generates the Makefile
+- **`flex`** — lexer generator used to compile `gcode.l` into a C++ tokenizer
+- **`wiringPi`** — GPIO access library for Raspberry Pi; drives the stepper motors and servo
+- **`g++`** — C++ compiler with C++0x support (included in the standard `build-essential` package)
+
+<Note>
+  CMake will fail with `Could not find wiringPi` if wiringPi is not installed. Run the `apt-get` command above before running `cmake .`.
+</Note>
+
+## Build steps
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/bertlr/vplotter.git && cd vplotter
+    ```
+  </Step>
+
+  <Step title="Configure with CMake">
+    ```bash
+    cmake .
+    ```
+
+    CMake locates the wiringPi library and the flex executable, then generates a `Makefile`. It also runs flex on `gcode.l` to produce the `lex.xx.cc` lexer source file before compilation begins.
+  </Step>
+
+  <Step title="Compile">
+    ```bash
+    make
+    ```
+
+    Compiles `Geometry.cpp`, `Machine.cpp`, `main.cpp`, and the flex-generated `lex.xx.cc` into the `vplotter` binary.
+  </Step>
+
+  <Step title="Install">
+    ```bash
+    sudo make install
+    ```
+
+    Installs the `vplotter` binary to `/usr/local/bin/vplotter`, making it available system-wide.
+  </Step>
+</Steps>
+
+## What gets compiled
+
+| File | Purpose |
+|---|---|
+| `main.cpp` | Entry point; parses CLI arguments with `getopt_long`, opens the g-code file, and drives the execution loop |
+| `Machine.cpp` / `Machine.h` | Stepper motor control, cord-length mathematics, and movement interpolation between waypoints |
+| `Geometry.cpp` / `Geometry.h` | Arc-to-polygon approximation and polar/Cartesian coordinate conversion used during path planning |
+| `gcode.l` | Flex lexer definition that tokenizes g-code input; compiled by flex to `lex.xx.cc` at configure time |
+
+<Info>
+  The flex lexer uses `%option prefix="xx"` and `%option c++` to avoid symbol conflicts with other flex scanners that may be linked into the same binary. The generated file is named `lex.xx.cc` to reflect that prefix.
+</Info>

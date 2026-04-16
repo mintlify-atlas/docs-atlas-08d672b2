@@ -1,0 +1,48 @@
+---
+title: "Install vplotter on Raspberry Pi"
+description: "Install the required dependencies, clone the vplotter repository, and build the binary from source using CMake on Raspberry Pi OS."
+---
+
+vplotter is distributed as source code and built directly on your Raspberry Pi. The build process takes a few minutes and requires an internet connection to fetch the repository and install system packages.
+
+<Steps>
+  <Step title="Install Raspberry Pi OS">
+    Download and flash **Raspberry Pi OS** to your SD card from the [official downloads page](https://www.raspberrypi.org/downloads). Any variant (Lite, Desktop, or Full) works. Boot your Pi and complete the initial setup before continuing.
+  </Step>
+  <Step title="Install dependencies">
+    Update your package list and install the required build tools and the wiringPi GPIO library:
+
+    ```bash
+    sudo apt-get install git-core cmake flex wiringpi
+    ```
+  </Step>
+  <Step title="Clone the repository">
+    Clone the vplotter source code from GitHub and enter the project directory:
+
+    ```bash
+    git clone https://github.com/bertlr/vplotter.git && cd vplotter
+    ```
+  </Step>
+  <Step title="Build with CMake">
+    Generate the build files and compile the binary:
+
+    ```bash
+    cmake . && make
+    ```
+  </Step>
+  <Step title="Install">
+    Install the compiled binary to your system path:
+
+    ```bash
+    sudo make install
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The binary is installed to `/usr/local/bin/vplotter`. After installation, you can run `vplotter` from any directory (always with `sudo`).
+</Note>
+
+<Warning>
+  vplotter requires root privileges to access GPIO pins via wiringPi. You must invoke it with `sudo` every time, or run it from a root shell. Running without root will fail at startup.
+</Warning>

@@ -1,97 +1,57 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "vplotter: Raspberry Pi vertical plotter for g-code"
+description: "vplotter is a Raspberry Pi vertical plotter that reads g-code and drives stepper motors and a servo pen-lift to draw artwork on any vertical canvas."
 ---
 
-## Setting up
+vplotter turns a Raspberry Pi into a wall-hanging drawing machine. It reads g-code from standard tools like Inkscape's gcodetools extension, controls two stepper motors via EasyDriver boards to move a hanging gondola across the canvas, and uses a servo motor to raise and lower the pen. This documentation covers everything you need to build, configure, and run your own vplotter.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install dependencies and build vplotter from source on your Raspberry Pi
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run your first g-code file and make your first drawing in minutes
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="G-code reference" icon="code" href="/usage/gcode-reference">
+    Supported G and M codes: moves, arcs, pen control, and units
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Hardware setup" icon="microchip" href="/hardware/wiring">
+    Wiring diagram for EasyDriver stepper boards and servo pen-lift
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## How vplotter works
 
-Everything you need to create world-class documentation.
+vplotter implements a V-plotter (also called a polargraph): two stepper motors hang at the top of a vertical surface, each winding a cord attached to the drawing gondola. By adjusting the cord lengths independently, the gondola swings to any XY position. A servo motor attached to the gondola lifts and lowers the pen.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+<Steps>
+  <Step title="Build the hardware">
+    Mount two stepper motors (with EasyDriver boards) at the top of your canvas. Attach cords from each motor spool to the gondola holding your pen and servo.
+  </Step>
+  <Step title="Install and build vplotter">
+    Clone the repository, install dependencies (`git`, `cmake`, `flex`, `wiringPi`), and build with CMake. See [Installation](/installation) for the full steps.
+  </Step>
+  <Step title="Measure your geometry">
+    Measure the distance between the two motors (`baselength`), and the horizontal and vertical offsets from the left motor to your canvas origin (`x0`, `y0`). See [Geometry](/hardware/geometry) for details.
+  </Step>
+  <Step title="Generate g-code and plot">
+    Use Inkscape with the gcodetools extension to convert artwork to g-code, then feed it to vplotter. See [Generating g-code](/reference/generating-gcode) for the workflow.
+  </Step>
+</Steps>
 
-## Need inspiration?
+## Key features
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Standard g-code input" icon="file-code">
+    Reads g-code compatible with Inkscape's gcodetools extension. Pipe any `.ngc` file directly to vplotter via stdin.
+  </Card>
+  <Card title="Linear and arc moves" icon="pen-line">
+    Supports rapid moves (G0), linear moves (G1), clockwise arcs (G2), and counter-clockwise arcs (G3) with radius or center-point coordinates.
+  </Card>
+  <Card title="Servo pen control" icon="arrow-up-down">
+    Z-axis commands (G0 Z1 / G0 Z0) lift and lower the pen via a PWM servo, giving clean start and end points for each drawn path.
+  </Card>
+  <Card title="Configurable geometry" icon="ruler">
+    All machine dimensions are set at runtime via command-line flags — no recompilation needed when you change your canvas setup.
+  </Card>
+</CardGroup>

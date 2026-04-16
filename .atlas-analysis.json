@@ -1,0 +1,53 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "vplotter",
+  "projectDescription": "A Raspberry Pi-based vertical plotter that reads g-code files and drives stepper motors and a servo pen-lift via wiringPi to draw on a vertical canvas.",
+  "theme": "aspen",
+  "primaryColor": "#c62452",
+  "lightColor": "#201d1d",
+  "darkColor": "#343d31",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": ["introduction", "installation", "quickstart"]
+      },
+      {
+        "group": "Usage",
+        "pages": ["usage/running", "usage/gcode-reference"]
+      },
+      {
+        "group": "Hardware",
+        "pages": ["hardware/geometry", "hardware/wiring"]
+      },
+      {
+        "group": "Reference",
+        "pages": ["reference/configuration", "reference/building", "reference/generating-gcode"]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Reads standard g-code files (compatible with Inkscape gcodetools)",
+    "Drives dual stepper motors via EasyDriver boards using wiringPi GPIO",
+    "Servo-controlled pen lift (Z-axis up/down)",
+    "Supports linear moves (G0/G1), clockwise arcs (G2), and counter-clockwise arcs (G3)",
+    "Millimeter and inch unit modes (G20/G21)",
+    "Feed rate control for controlled drawing speed",
+    "Configurable canvas geometry (origin offsets, motor base length, steps/mm)"
+  ],
+  "publicApiSurface": [
+    "--baselength=<mm>  distance between stepper motors",
+    "--x0=<mm>          horizontal offset from left motor to canvas origin",
+    "--y0=<mm>          vertical offset from left motor to canvas origin",
+    "--z_up=<1-100>     servo value to lift pen",
+    "--z_down=<1-100>   servo value to lower pen",
+    "--steps=<n>        steps per mm (1600 / pulley circumference for microsteps)",
+    "G0 X Y             rapid move (pen up)",
+    "G1 X Y F           linear move with feed rate",
+    "G2 X Y R / I J F   clockwise arc",
+    "G3 X Y R / I J F   counter-clockwise arc",
+    "G20                switch to inch units",
+    "G21                switch to millimeter units",
+    "M30                end program and return to origin"
+  ]
+}

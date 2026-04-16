@@ -1,80 +1,81 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Get started with vplotter"
+description: "Go from a freshly installed vplotter to your first drawing: measure your canvas, test the connection, create a g-code file, and run the plotter."
 ---
 
-## Get started in three steps
+This guide walks you through everything you need to make your first plot — from measuring your hardware to feeding g-code into vplotter and watching the gondola move.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you start, make sure you have:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+- vplotter installed (see [Installation](/installation))
+- Your hardware fully assembled: two stepper motors at the top of the canvas, cords attached to the gondola, and a servo mounted on the gondola
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Measure your canvas geometry">
+    vplotter needs four measurements to compute cord lengths correctly. Take these from your physical setup:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    | Flag | What to measure |
+    |------|----------------|
+    | `--baselength` | Distance in mm between the two motor axles |
+    | `--x0` | Horizontal offset in mm from the left motor to your canvas origin |
+    | `--y0` | Vertical offset in mm from the left motor to your canvas origin (negative — the origin is below the motors) |
+    | `--steps` | Steps per mm for your stepper motors (depends on motor, driver microstepping, and spool diameter) |
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    See [Hardware geometry](/hardware/geometry) for a detailed diagram and measurement guide.
+  </Step>
+  <Step title="Test the connection">
+    Run vplotter with your measured values and no input file to verify that the motors and servo respond. Use the example values below, substituting your own measurements:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash
+    sudo vplotter --x0=170 --y0=-720 --baselength=685 --z_up=11 --z_down=7 --steps=40.1
+    ```
 
-### Step 3: Go live
+    **What each flag means:**
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    - `--x0=170` — canvas origin is 170 mm to the right of the left motor
+    - `--y0=-720` — canvas origin is 720 mm below the motors (negative Y)
+    - `--baselength=685` — the two motors are 685 mm apart
+    - `--z_up=11` — servo PWM value that lifts the pen
+    - `--z_down=7` — servo PWM value that lowers the pen to the canvas
+    - `--steps=40.1` — steps per mm of cord movement
 
-## Next steps
+    vplotter will wait for g-code on stdin. Press **Ctrl+C** to exit once you confirm the servo moved on startup.
+  </Step>
+  <Step title="Create a simple g-code file">
+    Create a file called `myfile.ngc` with a minimal g-code program. This example lifts the pen, moves to a start position, draws a short horizontal line, and stops:
 
-Now that you have your docs running, explore these key features:
+    ```gcode
+    G21 (units in mm)
+    G00 Z5 (lift pen)
+    G00 X50 Y50 (move to start)
+    G01 Z-0.125 F100 (lower pen)
+    G01 X100 Y50 F400 (draw line)
+    G00 Z5 (lift pen)
+    M30
+    ```
 
-<CardGroup cols={2}>
+    Save the file on your Raspberry Pi in the same directory you will run vplotter from.
+  </Step>
+  <Step title="Run the plotter">
+    Feed the g-code file to vplotter using stdin redirection:
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
+    ```bash
+    sudo vplotter --x0=170 --y0=-720 --baselength=685 --z_up=11 --z_down=7 --steps=40.1 < myfile.ngc
+    ```
+
+    vplotter reads each command from the file, computes the required cord lengths, steps the motors, and controls the servo. The gondola will move to X50 Y50, lower the pen, draw to X100 Y50, lift the pen, and stop when it reaches `M30`.
+  </Step>
+  <Step title="Stop the plotter">
+    vplotter stops automatically when it reads an `M30` command (program end). You can also stop it at any time by pressing **Ctrl+C** in the terminal, or by typing `M30` and pressing Enter if you are running interactively without a file.
+  </Step>
+</Steps>
+
+<Tip>
+  See the [G-code reference](/usage/gcode-reference) for the full list of supported G and M codes, including arc moves (G2/G3), unit switching (G20/G21), and feed rate control.
+</Tip>
+
+<Card title="Generating g-code with Inkscape" icon="pen-nib" href="/reference/generating-gcode">
+  Learn how to use Inkscape's gcodetools extension to convert vector artwork into g-code files ready for vplotter.
 </Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

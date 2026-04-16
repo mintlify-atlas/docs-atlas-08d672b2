@@ -1,0 +1,118 @@
+---
+title: "Canvas geometry and motor positioning"
+description: "How to measure x0, y0, and baselength for your vplotter setup, and compute the correct steps/mm value for your stepper motors and pulleys."
+---
+
+Before you run vplotter, you need to take four physical measurements from your machine. These measurements tell vplotter where your motors are relative to the drawing area, how far apart they are, and how many motor steps equal one millimetre of cord movement. Getting these values right is the single most important step in setting up an accurate machine.
+
+## The coordinate system
+
+vplotter uses a 2D coordinate system where the **origin (0, 0) is the top-left corner of your drawing area** — the point you want the gondola to start from.
+
+- **X increases to the right** across the canvas.
+- **Y increases downward** toward the bottom of the canvas.
+- The two stepper motors hang **above** the canvas origin, which means their Y position relative to the canvas is negative (they are "behind" the origin in the Y direction).
+
+The left motor is located at `(−x0, −y0)` relative to the canvas origin. Because `y0` is negative (the motor is above the origin), `−y0` is positive — the motor is physically higher than the canvas top edge.
+
+Here is a text diagram of the layout:
+
+```
+LEFT MOTOR ●────────────────────────● RIGHT MOTOR
+            \                      /
+             \                    /
+              \  (baselength)     /
+               \                /
+                \    cords     /
+                 \            /
+                  \          /
+    (0,0) ────────●──────────────────── X+
+   canvas          GONDOLA
+   origin
+         |
+        Y+
+         |
+```
+
+The horizontal span from the left motor to the right motor is `baselength`. The left motor is `x0` mm to the left of the canvas origin horizontally, and `|y0|` mm above it vertically.
+
+## Parameters
+
+### `--baselength`
+
+The horizontal distance in millimetres between the **axles of the two stepper motors**. Measure from the centre of the left motor shaft to the centre of the right motor shaft. This is a purely horizontal measurement — both motors should be at the same height.
+
+### `--x0`
+
+The horizontal distance in millimetres from the **left motor axle** to the **canvas origin (0, 0)**. This is measured along the horizontal axis only. For example, if your canvas starts 170 mm to the right of the left motor, set `--x0=170`.
+
+### `--y0`
+
+The vertical distance in millimetres from the **left motor axle** to the **canvas origin (0, 0)**, expressed as a **negative number** because the motors are above the canvas.
+
+For example, `--y0=-720` means the motors are 720 mm above the top edge of the drawing area. If you enter a positive value here, vplotter will compute incorrect cord lengths and the gondola will not home correctly.
+
+### `--steps`
+
+Steps per millimetre of cord movement. This depends on your motor's step angle, the microstepping setting on your driver, and the circumference of the toothed pulley or spool.
+
+For a motor with 200 steps per revolution using 8× microstepping (1600 steps/rev) and a pulley of diameter `d` mm:
+
+```
+circumference = π × d
+steps/mm = 1600 / circumference
+```
+
+**Example:** A pulley with a 20 mm diameter has a circumference of π × 20 ≈ 62.8 mm, giving approximately 25.5 steps/mm.
+
+The README example uses `--steps=40.1`, which corresponds to a smaller pulley (circumference ≈ 39.9 mm, diameter ≈ 12.7 mm).
+
+<Tip>
+  Measure the actual circumference of your spool by wrapping a strip of paper around it once and marking where it overlaps. This is more accurate than relying on the nominal diameter alone.
+</Tip>
+
+## Computing initial cord lengths
+
+When vplotter starts, it assumes the gondola is sitting at the canvas origin **(0, 0)**. From your geometry parameters, it computes the starting cord lengths automatically:
+
+**Left cord length (in steps):**
+
+```
+sqrt(x0² + y0²) × steps/mm
+```
+
+**Right cord length (in steps):**
+
+```
+sqrt((baselength − x0)² + y0²) × steps/mm
+```
+
+These values initialise the internal cord counters. Every move thereafter adds or subtracts steps from each counter to reach the target position. If the gondola is not at (0, 0) when vplotter starts, all subsequent positions will be offset by the same amount.
+
+<Tip>
+  Always position the gondola manually at your canvas origin before launching vplotter. This is the most reliable way to ensure cord lengths are correct at startup.
+</Tip>
+
+## Example measurement
+
+The following values come from the README example and represent a real working setup:
+
+```bash
+sudo vplotter --x0=170 --y0=-720 --baselength=685 --z_up=11 --z_down=7 --steps=40.1
+```
+
+| Parameter | Value | Meaning |
+|-----------|-------|---------|
+| `--x0` | `170` | Canvas origin is 170 mm to the right of the left motor |
+| `--y0` | `-720` | Motors are 720 mm above the top of the drawing area |
+| `--baselength` | `685` | The two motors are 685 mm apart |
+| `--steps` | `40.1` | Each millimetre of cord movement requires 40.1 motor steps |
+
+With these values, the initial cord lengths are:
+
+- Left cord: `sqrt(170² + 720²)` ≈ 738 mm × 40.1 ≈ **29,594 steps**
+- Right cord: `sqrt((685 − 170)² + 720²)` = `sqrt(515² + 720²)` ≈ 885 mm × 40.1 ≈ **35,488 steps**
+
+<Warning>
+  Incorrect geometry measurements will cause the gondola to home to the wrong position. Every subsequent drawing will be offset, skewed, or distorted. Double-check all four values against your physical machine before running vplotter.
+</Warning>
